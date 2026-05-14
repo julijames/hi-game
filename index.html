@@ -1,35 +1,997 @@
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=3, user-scalable=1"
-    />
-    <title></title>
-    <link rel="preconnect" href="https://use.typekit.net" crossorigin />  <link rel="stylesheet" rel="preload" as="font" href="https://use.typekit.net/.css?v=1772652339" />
-    
-    <script src="scormdriver.js" charset="utf-8"></script>
-    <script>
-      USE_LEGACY_IDENTIFIERS_FOR_2004 = true;
-      REVIEW_MODE_IS_READ_ONLY = false;
-      window.onbeforeunload = () => window.Unload();
-      const LoadContent = function () {
-        [
-          "assets/js/project.js",
-          "dist/main.chunk.js",
-          "dist/runtime-main.bundle.js",
-          "dist/vendors-main.chunk.js",
-        ].forEach((src) => {
-          script = document.createElement("script");
-          script.src = src;
-          script.charset = "utf-8";
-          script.async = false;
-          document.body.appendChild(script);
-        });
-      };
-    </script>
-  </head>
-  <body onload="Start()">
-    <div id="app" style="width: 100%; height: 100%"></div>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Health Care America</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root {
+    --hca-navy: #0b2a4a;
+    --hca-blue: #1e63a8;
+    --hca-cream: #f5f1e8;
+    --hca-yellow: #E8D01B;
+    --hca-red: #c0392b;
+    --hca-green: #2e8b57;
+  }
+  body { background: var(--hca-cream); font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; }
+  .btn-primary { background: var(--hca-blue); color: white; }
+  .btn-primary:hover { background: var(--hca-navy); }
+  .meter-bar { transition: width 0.6s ease-out; }
+  .fade-in { animation: fadeIn 0.4s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none;} }
+  .preserve-newlines { white-space: pre-line; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div style="max-width:640px;margin:80px auto;padding:24px;font-family:Georgia,serif;color:#0b2a4a;text-align:center;">
+    <div style="font-size:18px;margin-bottom:8px;">Loading Health Care America…</div>
+    <div style="font-size:13px;color:#666;">If this message stays for more than a few seconds, your browser may be blocking the React/Tailwind scripts loaded from unpkg.com. Try opening this page in Chrome, Safari, or Firefox with internet access.</div>
+  </div>
+</div>
+
+<script>
+  window.addEventListener('error', function(e){
+    var r = document.getElementById('root');
+    if (r) r.innerHTML = '<div style="max-width:720px;margin:40px auto;padding:20px;font-family:monospace;background:#fee;border:1px solid #c00;color:#900;border-radius:8px;"><b>Script error:</b><br>' + (e.message || e) + '<br><small>' + (e.filename || '') + ':' + (e.lineno || '') + '</small></div>';
+  });
+</script>
+
+<script type="text/babel" data-presets="env,react">
+const { useState, useMemo, useEffect } = React;
+
+// =============================================================================
+// All text below is verbatim from the HI Game Content.xlsx provided by the
+// project author. Original typos and quirks preserved (e.g. "Contiue to advise
+// Emma", "is list at", curly apostrophes, double-headed "Client Profile: Emma").
+// =============================================================================
+
+const START_WELLNESS = 50;
+const START_FUND = 5000;
+
+const CATEGORIES = {
+  costs: {
+    id: "costs",
+    label: "What You Pay",
+    description: "How health insurance gets paid for — what comes out of your pocket each month, before insurance kicks in, and once it does.",
+    accent: "#B7831F",
+    accentBg: "#FFF6DA",
+    accentBorder: "#F0DCA0",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    )
+  },
+  providers: {
+    id: "providers",
+    label: "Who Provides Care",
+    description: "Who you can see, when you need a referral first, and why \"in-network\" matters for the bill.",
+    accent: "#1E8A55",
+    accentBg: "#E7F4ED",
+    accentBorder: "#B7DFC8",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    )
+  },
+  law: {
+    id: "law",
+    label: "The Law",
+    description: "The federal framework that shapes how health insurance is bought and sold in the United States.",
+    accent: "#1E63A8",
+    accentBg: "#E5EEF7",
+    accentBorder: "#B6CDE6",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/></svg>
+    )
+  }
+};
+
+const TERMS = [
+  {
+    id: "monthly_premium",
+    category: "costs",
+    term: "Monthly Premium",
+    body: "Amount paid to have health insurance each month."
+  },
+  {
+    id: "deductible",
+    category: "costs",
+    term: "Deductible",
+    body: "Amount paid out of pocket for health services before insurance starts to pay. After a consumer meets the deductible, she pays a co-payment or co-insurance (and sometimes it's a combination of both) for covered services. Health insurance pays the rest."
+  },
+  {
+    id: "copay",
+    category: "costs",
+    term: "Copayment (or, “co-pay”)",
+    body: "A fixed amount you pay for a health care service. This amount is only the portion of the cost for a given service. Your insurance pays the remainder.\nTypically, the cost of a co-pay is listed on your insurance card. The value may be different depending on the type of service you receive (picking up a prescription, going to see a doctor or specialist, etc.). Plans with lower monthly premiums tend to have higher co-pays."
+  },
+  {
+    id: "coinsurance",
+    category: "costs",
+    term: "Co-Insurance",
+    body: "After meeting your deductible, you will continue to pay for services; however, the price is reduced. Typically, you will only pay 20% of the cost and health insurance will pick up the remaining 80%."
+  },
+  {
+    id: "oop_max",
+    category: "costs",
+    term: "Out of Pocket Maximum",
+    body: "This is the most you have to pay for covered services in one year. After you spend your Out of Pocket Maximum amount on deductibles, co-pays, and co-insurance, your health insurance pays 100% of the costs of covered benefits."
+  },
+  {
+    id: "in_network",
+    category: "providers",
+    term: "In-Network Provider",
+    body: "A health care provider who has a relationship with your health insurance company. With many insurance plans, if you visit someone outside of your network the visit and services will cost more than if you visit an in-network provider.\nHospitals are also labeled as in and out-of-network; however, this does not necessarily mean that everyone working in a hospital is in the same network."
+  },
+  {
+    id: "referral",
+    category: "providers",
+    term: "Referral",
+    body: "A written order from your primary care physician for you to see a specialist or get medical services.\nIn some cases you need to get a referral before you can receive medical care from anyone except your primary care physician. If you don’t get a referral first, the plan may not pay for the services."
+  },
+  {
+    id: "aca",
+    category: "law",
+    term: "Affordable Care Act (ACA)",
+    body: "The ACA, enacted in March 2010, aims to make affordable health insurance available to more people.",
+    bullets: [
+      "Health Insurance Marketplace: Shop for and compare various health plans.",
+      "Affordability: If your income is 100-400% of the federal poverty level, you may qualify for a “premium tax credit” to reduce monthly premiums.",
+      "Penalties & Coverage: Without insurance, you face annual penalties. Dependents can stay on a parent’s plan until age 26."
+    ]
+  }
+];
+
+const TERMS_BY_ID = Object.fromEntries(TERMS.map(t => [t.id, t]));
+
+// ---- Intro slides (from xlsx Main Story) ------------------------------------
+
+const INTRO_SLIDES = [
+  {
+    id: "title",
+    headline: "Welcome to Health Care America",
+    body: "",
+    button: "Start",
+    isTitle: true
+  },
+  {
+    id: "overview",
+    headline: "You’re Hired!",
+    body: "Congratulations! You’ve been hired for an internship with Health Care America, an advocacy group that provides financial assistance and information to community members for health insurance expenses on an as-needed basis.\n\nYour job is to work through the Client Inquiry Backlog for Health Care America. You will respond to client questions and provide people with information, support, or financial assistance.",
+    button: "Continue"
+  },
+  {
+    id: "goal",
+    headline: "Your Goal",
+    body: "At Health Care America our objective is to increase our Community Wellness measurement (currently at 50%) by helping our community to better understand health insurance and how to use it. We also have a small Healthcare Assistance fund that you can use to help clients with unexpected bills and fees. Keep in mind that we do not have enough funds for every financial hardship, though. It’s also good to remember bills might be unnecessary and could ultimately be waived. \n\nIf things don’t go well, your internship will be terminated. But, for a job well done you may be offered a permanent position, with your own health care coverage.",
+    button: "Continue"
+  },
+  {
+    id: "training",
+    headline: "On the job training",
+    body: "For each client inquiry you’ll get a Client Profile and a Health Insurance Guide with terms that might be helpful for the case. \n\nBe sure to review the relevant information from the Health Insurance Guide which will help you make decisions on how to assist each client.",
+    button: "Review the Health Insurance Guide"
+  }
+];
+
+// ---- Scenarios in the xlsx's order: Emmanuel, Vanessa, Randall, Emma ----
+
+const SCENARIOS = [
+  {
+    id: "emmanuel",
+    name: "Emmanuel",
+    illustration: "assets/person_desk2.png",
+    relevantTermIds: ["coinsurance", "deductible", "oop_max"],
+    profileBullets: [
+      "Age: 45",
+      "Gender: Male",
+      "Occupation: Web Designer",
+      "Annual Income: $40,000 in retirement income",
+      "Health Status: Generally healthy, but fills a lot of prescriptions to manage issues like cholesterol and high blood pressure."
+    ],
+    introBody: "Emmanuel just had an extensive surgery. He has health insurance and thought that it could cover all the medical expenses. Now Emmanuel is looking at an $8000 bill and he is in complete shock. Why isn’t his health insurance covering this?",
+    profileContinue: "Continue to review some terms.",
+    termsContinue: "Continue to advise Emmanuel.",
+    adviseHeadline: "How will you advise Emmanuel?",
+    detailBody: "You ask Emmanuel to provide you with information about his plan and the surgery.\n\n-The total cost of the surgery was $30000\n-His deductible is $5000 and he didn’t have any health care expenses this year\n-His co-insurance is list at 20% so he should have only had to pay 20% of the remaining $25,000 after his deductible ($5000)\n\nHe’s scratching his head. Why is the bill $8000?",
+    vignette: "Thanks to co-insurance and deductibles, billing issues can get complicated very quickly. \n\nCo-Insurance is the amount you pay after meeting your plan’s deductible. \n\nThe Deductible is the amount paid out of pocket before insurance starts to pay, but this amount may not be the total that you’d pay out of pocket in an overall year.\n\nCo-Insurance is a reduced amount you pay, typically at 20% of the cost of services, and insurance pays the other 80% until you hit the Out-of-Pocket Maximum.\n\nThe Out-of-Pocket Maximum is the annual total you pay for medical services. This amount is a combination of covered healthcare services costs (but, doesn’t include the Monthly Premium). This amount resets each year.\n\nPrescription cost questions are also common. Speaking of which, the next client has an issue with prescription costs.",
+    nextContinue: "Continue for the next Client Profile.",
+    choices: [
+      {
+        letter: "A",
+        label: "Offer $3000 Health Care Assistance for the difference between the deductible and the total.",
+        tier: "ok",
+        dWellness: -10,
+        dFund: -3000,
+        feedback: "Emmanuel receives substantial financial help, though his understanding of the bill remains unclear."
+      },
+      {
+        letter: "B",
+        label: "Offer $1000 Health Care Assistance and suggest Emmanuel to call his health insurance company for clarification about the deductibles and co-insurance.",
+        tier: "better",
+        dWellness: 5,
+        dFund: -1000,
+        feedback: "Emmanuel gets partial financial assistance and is encouraged to learn more about his insurance, promoting understanding."
+      },
+      {
+        letter: "C",
+        label: "Given this information it looks like the bill needs to be adjusted - and not in Emmanuel’s favor. You explain his deductible plus the co-insurance actually total $10,000.",
+        tier: "best",
+        dWellness: 15,
+        dFund: -1000,
+        feedback: "Emmanuel gains a clear understanding of his financial responsibility, significantly boosting his knowledge of insurance."
+      }
+    ]
+  },
+  {
+    id: "vanessa",
+    name: "Vanessa",
+    illustration: "assets/email_form.png",
+    relevantTermIds: ["copay"],
+    profileBullets: [
+      "Age: 42",
+      "Gender: Female",
+      "Occupation: Project Manager, mother of two",
+      "Annual Income: $50000",
+      "Health Status: Regularly sees a therapist to manage her mental health and wellbeing. Fills prescriptions on a monthly basis for an antidepressant."
+    ],
+    introBody: "Vanessa sent an email because she doesn’t know why her medication cost was much higher this month. She has a diagnosis for depression and a regular prescription for antidepressants that usually only costs a few dollars a month.",
+    profileContinue: "Continue to review some terms.",
+    termsContinue: "Continue to advise Vanessa",
+    adviseHeadline: "How will you advise Vanessa?",
+    detailBody: "Vanessa’s email describes what happened:",
+    email: "“Hello, my name is Vanessa and I hope you can help me. This morning I went to pick up my prescription from the pharmacy. In the past, this name brand prescription had a co-pay of $10. Today, I had to pay $150 for the same prescription.\nI paid for it because I need this medication daily, but I am confused about why the cost jumped so much. I’m also very worried. I don’t know if I can afford to spend this much every month for a prescription. \nCan Health Care America help me with this?”",
+    vignette: "Prescription coverage questions are common as the prices for medications vary and can change without notice. Sometimes the co-pay for a generic version of a medication is more cost effective. \n\nCo-Pays are fixed amounts paid for services and prescriptions and can help keep costs predictable for patients who take medications on an ongoing basis.\n\nA co-pay is not the full cost of a medication or medical services. Instead, the health insurance user pays a portion of the cost of the prescription or service.\n\nThe next client has questions about health insurance networks.",
+    nextContinue: "Continue for the next Client Profile",
+    choices: [
+      {
+        letter: "A",
+        label: "Suggest she call her prescription insurance company and ask for more information.",
+        tier: "best",
+        dWellness: 15,
+        dFund: 0,
+        feedback: "Vanessa is encouraged to understand her insurance better, significantly increasing her knowledge."
+      },
+      {
+        letter: "B",
+        label: "Offer one time assistance with the difference between the cost of her previous co-pay and current bill.",
+        tier: "ok",
+        dWellness: -10,
+        dFund: -140,
+        feedback: "Vanessa receives financial relief but may not fully understand the reasons behind the cost change."
+      },
+      {
+        letter: "C",
+        label: "Suggest she speak with the doctor to switch to a generic version of the prescription. You wouldn't provide any financial assistance.",
+        tier: "better",
+        dWellness: 10,
+        dFund: 0,
+        feedback: "Vanessa learns about cost-effective alternatives, promoting informed decision-making."
+      }
+    ]
+  },
+  {
+    id: "randall",
+    name: "Randall",
+    illustration: "assets/messy_desk.png",
+    relevantTermIds: ["in_network", "referral"],
+    profileBullets: [
+      "Age: 50",
+      "Gender: Male",
+      "Occupation: Restaurant Manager",
+      "Annual Income: $55000",
+      "Health Status: Visits the doctor as needed. Recently diagnosed with thyroid cancer."
+    ],
+    introBody: "Randall received a bill for $4000 for health care services he didn’t know he received. He called Health Care America to see if someone can help him understand what happened.",
+    profileContinue: "Continue to review some terms.",
+    termsContinue: "Continue to advise Randall.",
+    adviseHeadline: "How will you advise Randall?",
+    detailBody: "Randall studied his health insurance carefully and when he needed surgery, he received a referral from his doctor for a surgeon and hospital that were labeled as in-network.\nHowever, during his care a cardiologist was brought in for consultation without his knowledge. This cardiologist was not in his network. Insurance did cover some of the cost, but he’s being billed for the balance - $4000. Randall isn’t sure he should have to pay for a bill for services he was not aware of.\nHe called Health Care America for advice on his next steps.",
+    vignette: "In-Network and Out-of-Network surprises are never fun! Especially when those large bills start rolling in unexpectedly.\n\nMost people have a primary care provider, but may need a Referral to see a specialist or to access other certain medical services, whether in-network or out-of-network. For some plans, if you don’t get a referral first, then health insurance may not pay for the services at all.\n\nIt’s important for health insurance users to understand which doctors and hospitals are In-Network (therefore they have a relationship with your health insurance company), but it’s also important to know that an in-network hospital may employ and work with doctors who are Out-of-Network for you. The hospital also may not check on who is in- or out-of-network before a doctor treats you. In this case, your health insurance company may not cover portions of your medical bill from those out-of-network providers.",
+    nextContinue: "Continue for the next Client Profile.",
+    choices: [
+      {
+        letter: "A",
+        label: "Have Randall call the hospital to get an itemized bill and learn more. You wouldn’t need to provide financial assistance.",
+        tier: "best",
+        dWellness: 15,
+        dFund: 0,
+        feedback: "Randall is empowered to investigate his billing, significantly increasing his understanding."
+      },
+      {
+        letter: "B",
+        label: "Apologize for the confusion and tell him he should have a referral for an in-network cardiologist before surgery. You wouldn’t need to provide financial assistance.",
+        tier: "better",
+        dWellness: 5,
+        dFund: 0,
+        feedback: "Randall gains some understanding of the referral process but remains burdened by the bill."
+      },
+      {
+        letter: "C",
+        label: "Offer to provide financial assistance for the surprise bill expenses.",
+        tier: "ok",
+        dWellness: -15,
+        dFund: -4000,
+        feedback: "Randall is relieved of the financial burden but may not fully understand the insurance network issues."
+      }
+    ]
+  },
+  {
+    id: "emma",
+    name: "Emma",
+    illustration: "assets/person_desk.png",
+    relevantTermIds: ["aca", "monthly_premium", "deductible"],
+    profileBullets: [
+      "Age: 25",
+      "Gender: Female",
+      "Occupation: Full-time college student, works part-time during breaks and summer",
+      "Annual Income: $15,000",
+      "Health Status: Visits doctor once a year for her wellness exam and occasionally for allergies/illness. Takes prescription allergy medication and birth control."
+    ],
+    introBody: "Emma is about to age out of her parents’ health insurance. Now, she needs to acquire her own coverage but doesn’t know where to begin. Her parents have always been covered by employers and they’re at a loss to help her given how much has changed. A friend suggested she get in touch with Health Care America.",
+    profileContinue: "Continue to review some terms.",
+    termsContinue: "Contiue to advise Emma.",
+    adviseHeadline: "How will you advise Emma?",
+    detailBody: "Emma isn’t sure about her options. When she contacted the University she learned that she can get coverage by semester, but she’ll have to wait until the next semester begins.",
+    plans: [
+      { name: "University Health Plan", lines: ["Spring semester premium: $702", "Deductible: $500"] },
+      { name: "Marketplace Health Plan", lines: ["Monthly Premium: $11", "Deductible: $6000"] }
+    ],
+    detailBodyAfterPlans: "She also looked into the Health Insurance Marketplace and found a few plans that have a cheaper premium. Enrollment is open, so she could sign up soon.",
+    vignette: "The Affordable Care Act (ACA, Obamacare) is complex. In the most basic sense, the goal is to make health insurance available, and affordable, for more people. Under the act, everyone should have health insurance, whether purchased through the Health Insurance Marketplace, an employer, or elsewhere.  \n\nAlso, regardless of where health insurance is acquired most people will pay a Monthly Premium. Just like rent, it’s paid each month, otherwise coverage is canceled. Occasionally premiums can be paid annually or twice a year, it just depends on the plan.\n\nIn addition to the monthly premium, many plans also have a Deductible. This is the amount paid out of pocket, before insurance starts to pay for medical services, and the Deductible amount may not be the total that an insurance user will have to pay out of pocket in an overall year.",
+    nextContinue: "Continue",
+    choices: [
+      {
+        letter: "A",
+        label: "Emma could go without health insurance. She seems pretty healthy. You wouldn’t need to provide financial assistance.",
+        tier: "ok",
+        dWellness: -20,
+        dFund: 0,
+        feedback: "Encouraging Emma to go without insurance may lead to future financial and health risks, reducing community wellness."
+      },
+      {
+        letter: "B",
+        label: "Emma should go with a student health plan. You offer financial assistance to cover the time between her birthday and the new semester.",
+        tier: "better",
+        dWellness: 10,
+        dFund: -500,
+        feedback: "Emma gets the necessary coverage with financial support, enhancing her well-being and security."
+      },
+      {
+        letter: "C",
+        label: "Emma should go with a plan from the Health Insurance Marketplace. You wouldn’t need to provide financial assistance.",
+        tier: "best",
+        dWellness: 15,
+        dFund: 0,
+        feedback: "Emma gets affordable coverage and understands her options, significantly boosting her knowledge and security."
+      }
+    ]
+  }
+];
+
+const CHAPTERS = [
+  { id: 'welcome', label: 'Welcome' },
+  ...SCENARIOS.map(s => ({ id: s.id, label: s.name })),
+  { id: 'end', label: 'Results' }
+];
+
+// ---- Components -------------------------------------------------------------
+
+function Meter({ label, value, max, color, isFund }) {
+  const pct = Math.max(0, Math.min(100, (value / max) * 100));
+  const display = isFund ? '$' + value.toLocaleString() : value + '%';
+  return (
+    <div className="flex-1 min-w-[180px]">
+      <div className="flex justify-between text-xs sm:text-sm mb-1 font-sans">
+        <span className="font-semibold tracking-wide" style={{color: 'var(--hca-navy)'}}>{label}</span>
+        <span className="font-mono font-bold" style={{color: 'var(--hca-navy)'}}>{display}</span>
+      </div>
+      <div className="h-3 rounded-full bg-slate-200 overflow-hidden">
+        <div className="meter-bar h-full rounded-full" style={{width: `${pct}%`, background: color}} />
+      </div>
+    </div>
+  );
+}
+
+function ProgressStepper({ chapterIdx }) {
+  return (
+    <div className="flex items-start max-w-3xl mx-auto px-2">
+      {CHAPTERS.map((step, i) => {
+        const done = i < chapterIdx;
+        const active = i === chapterIdx;
+        return (
+          <React.Fragment key={step.id}>
+            <div className="flex flex-col items-center shrink-0 w-12 sm:w-16">
+              <div
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold font-sans transition ${
+                  active
+                    ? 'bg-blue-600 text-white ring-4 ring-blue-100'
+                    : done
+                      ? 'bg-green-600 text-white'
+                      : 'bg-slate-200 text-slate-500'
+                }`}
+              >
+                {done ? '✓' : i + 1}
+              </div>
+              <span
+                className={`text-[10px] sm:text-xs font-sans mt-1 text-center whitespace-nowrap leading-tight ${
+                  active ? 'text-blue-900 font-semibold' : done ? 'text-green-700' : 'text-slate-400'
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+            {i < CHAPTERS.length - 1 && (
+              <div
+                className={`flex-1 h-0.5 mt-[11px] mx-0.5 sm:mx-1 transition ${
+                  done ? 'bg-green-400' : 'bg-slate-200'
+                }`}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+function Header({ wellness, fund, chapterIdx }) {
+  return (
+    <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b shadow-sm">
+      <div className="max-w-4xl mx-auto px-4 pt-3 pb-2 flex gap-6 items-center">
+        <Meter label="Community Wellness" value={wellness} max={100} color="var(--hca-green)" />
+        <Meter label="Assistance Fund" value={fund} max={START_FUND} color="var(--hca-blue)" isFund />
+      </div>
+      <div className="border-t border-slate-100 py-2.5">
+        <ProgressStepper chapterIdx={chapterIdx} />
+      </div>
+    </header>
+  );
+}
+
+function Card({ children, className = "" }) {
+  return (
+    <div className={`bg-white rounded-2xl shadow-md border border-slate-200 p-6 sm:p-8 fade-in ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function PrimaryButton({ children, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="btn-primary px-6 py-3 rounded-full font-sans font-semibold tracking-wide shadow hover:shadow-lg transition"
+    >
+      {children}
+    </button>
+  );
+}
+
+function BackLink({ label, onClick }) {
+  if (!onClick) return null;
+  return (
+    <button
+      onClick={onClick}
+      className="font-sans text-sm text-slate-500 hover:text-blue-700 transition flex items-center gap-1 mb-4"
+    >
+      <span aria-hidden="true">←</span> Back to {label}
+    </button>
+  );
+}
+
+function TermCard({ term }) {
+  const cat = CATEGORIES[term.category];
+  return (
+    <div
+      className="bg-white rounded-xl border-2 p-5 sm:p-6 h-full flex flex-col fade-in shadow-sm hover:shadow-md transition-shadow"
+      style={{borderColor: cat.accentBorder}}
+    >
+      <div className="flex items-center gap-2 mb-3" style={{color: cat.accent}}>
+        {cat.icon}
+        <span className="font-sans uppercase tracking-widest text-[10px] sm:text-xs font-bold">{cat.label}</span>
+      </div>
+      <h3 className="text-xl sm:text-2xl font-bold mb-3" style={{color: 'var(--hca-navy)'}}>{term.term}</h3>
+      <p className="text-slate-800 text-sm sm:text-base leading-relaxed preserve-newlines flex-1">{term.body}</p>
+      {term.bullets && (
+        <ul className="list-disc pl-5 mt-3 text-slate-800 text-sm sm:text-base space-y-1.5">
+          {term.bullets.map((b, i) => <li key={i}>{b}</li>)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function CategorySection({ category, terms }) {
+  return (
+    <section>
+      <div className="mb-5">
+        <div className="flex items-baseline gap-3 mb-1.5">
+          <div className="w-1.5 h-7 rounded-full" style={{background: category.accent}} />
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight" style={{color: category.accent}}>
+            {category.label}
+          </h2>
+          <span className="text-xs sm:text-sm font-sans text-slate-400 font-medium">
+            {terms.length} {terms.length === 1 ? 'term' : 'terms'}
+          </span>
+        </div>
+        <p className="text-slate-600 text-sm sm:text-base ml-4 pl-0.5">{category.description}</p>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-4">
+        {terms.map(t => <TermCard key={t.id} term={t} />)}
+      </div>
+    </section>
+  );
+}
+
+// ---- Screens ----------------------------------------------------------------
+
+function TitleScreen({ onStart }) {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-16 sm:py-24 lg:py-28 text-center fade-in">
+      <img src="assets/logo.png" alt="Health Care America" className="mx-auto w-80 sm:w-[480px] lg:w-[560px] mb-8" />
+      <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-10" style={{color: 'var(--hca-navy)'}}>
+        Welcome to Health Care America
+      </h1>
+      <PrimaryButton onClick={onStart}>Start</PrimaryButton>
+    </div>
+  );
+}
+
+function IntroSlideScreen({ slide, onContinue }) {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-10 lg:py-14">
+      <Card className="text-center">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6" style={{color: 'var(--hca-navy)'}}>
+          {slide.headline}
+        </h1>
+        <p className="text-base sm:text-lg lg:text-xl leading-relaxed text-slate-800 mb-8 text-left preserve-newlines max-w-3xl mx-auto">
+          {slide.body}
+        </p>
+        <PrimaryButton onClick={onContinue}>{slide.button}</PrimaryButton>
+      </Card>
+    </div>
+  );
+}
+
+function Guide({ onContinue }) {
+  const categoryOrder = ['costs', 'providers', 'law'];
+  const grouped = categoryOrder.map(catId => ({
+    cat: CATEGORIES[catId],
+    terms: TERMS.filter(t => t.category === catId)
+  }));
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="text-center mb-8 sm:mb-10">
+        <div className="uppercase tracking-[0.2em] text-xs font-sans font-semibold mb-2" style={{color: 'var(--hca-blue)'}}>
+          Onboarding · Health Insurance Guide
+        </div>
+        <h1 className="text-4xl sm:text-5xl font-bold mb-4" style={{color: 'var(--hca-navy)'}}>
+          Health Insurance Guide
+        </h1>
+        <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-700 leading-relaxed">
+          Review the terms below. You’ll see the relevant ones again for each client’s case before you advise.
+        </p>
+      </div>
+
+      <div className="space-y-10 sm:space-y-12">
+        {grouped.map(({cat, terms}) => (
+          <CategorySection key={cat.id} category={cat} terms={terms} />
+        ))}
+      </div>
+
+      <div className="mt-12 text-center">
+        <PrimaryButton onClick={onContinue}>Continue when you’re ready for your first Client Profile.</PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+function ClientHeader({ scenario, compact }) {
+  return (
+    <div className={`flex flex-col sm:flex-row gap-6 items-start ${compact ? 'mb-4' : 'mb-6'}`}>
+      <img src={scenario.illustration} alt="" className={`${compact ? 'w-20 h-20' : 'w-32 h-32 sm:w-40 sm:h-40'} object-contain shrink-0 mx-auto sm:mx-0`} />
+      <div className="flex-1">
+        <div className="uppercase tracking-widest text-xs font-sans font-semibold text-slate-500 mb-1">
+          Client Profile: {scenario.name}
+        </div>
+        <h2 className={`${compact ? 'text-2xl' : 'text-3xl sm:text-4xl'} font-bold mb-3`} style={{color: 'var(--hca-navy)'}}>{scenario.name}</h2>
+        {!compact && (
+          <ul className="text-slate-800 space-y-1">
+            {scenario.profileBullets.map((b, i) => (
+              <li key={i}>- {b}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InquiryScreen({ scenario, onContinue }) {
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <Card>
+        <ClientHeader scenario={scenario} />
+
+        <div className="bg-slate-50 border-l-4 p-4 rounded mb-6" style={{borderColor: 'var(--hca-yellow)'}}>
+          <div className="uppercase tracking-widest text-xs font-sans font-semibold text-slate-500 mb-1">Client Inquiry</div>
+          <p className="text-slate-900 leading-relaxed preserve-newlines">{scenario.introBody}</p>
+        </div>
+
+        <div className="text-center">
+          <PrimaryButton onClick={onContinue}>{scenario.profileContinue}</PrimaryButton>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function TermsReviewScreen({ scenario, onContinue, onBack }) {
+  const relevantTerms = (scenario.relevantTermIds || []).map(id => TERMS_BY_ID[id]).filter(Boolean);
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <BackLink label={`${scenario.name}’s inquiry`} onClick={onBack} />
+      <Card>
+        <ClientHeader scenario={scenario} compact />
+
+        <div className="border-t border-slate-200 pt-5 mb-6">
+          <div className="uppercase tracking-[0.2em] text-xs font-sans font-semibold mb-2" style={{color: 'var(--hca-blue)'}}>
+            Step 2 of 3 · Review the relevant terms
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2" style={{color: 'var(--hca-navy)'}}>
+            Terms that apply to {scenario.name}’s case
+          </h2>
+          <p className="text-slate-700">
+            Brush up on these before making your recommendation.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          {relevantTerms.map(t => <TermCard key={t.id} term={t} />)}
+        </div>
+
+        <div className="mt-8 text-center">
+          <PrimaryButton onClick={onContinue}>{scenario.termsContinue}</PrimaryButton>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function AdviseScreen({ scenario, onChoose, onBack }) {
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <BackLink label="review the terms" onClick={onBack} />
+      <Card>
+        <ClientHeader scenario={scenario} compact />
+
+        <div className="grid lg:grid-cols-[5fr_4fr] gap-6 lg:gap-10 items-start mt-2">
+          <div className="bg-slate-50 border-l-4 p-4 rounded space-y-3" style={{borderColor: 'var(--hca-yellow)'}}>
+            <div className="uppercase tracking-widest text-xs font-sans font-semibold text-slate-500 mb-1">Case details</div>
+            <p className="text-slate-900 leading-relaxed preserve-newlines">{scenario.detailBody}</p>
+
+            {scenario.email && (
+              <div className="bg-white border border-slate-200 rounded-lg p-4 mt-2">
+                <p className="text-slate-900 leading-relaxed preserve-newlines italic">{scenario.email}</p>
+              </div>
+            )}
+
+            {scenario.plans && (
+              <div className="grid sm:grid-cols-2 gap-3 mt-2">
+                {scenario.plans.map((p, i) => (
+                  <div key={i} className="bg-white border border-slate-200 rounded-lg p-4">
+                    <div className="font-sans font-semibold text-sm mb-2" style={{color: 'var(--hca-navy)'}}>{p.name}</div>
+                    <ul className="text-slate-800 text-sm space-y-1 font-sans">
+                      {p.lines.map((l, j) => <li key={j}>{l}</li>)}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {scenario.detailBodyAfterPlans && (
+              <p className="text-slate-900 leading-relaxed preserve-newlines">{scenario.detailBodyAfterPlans}</p>
+            )}
+          </div>
+
+          <div>
+            <h3 className="text-xl font-semibold mb-3" style={{color: 'var(--hca-navy)'}}>{scenario.adviseHeadline}</h3>
+            <div className="grid gap-3">
+              {scenario.choices.map((c, i) => (
+                <button
+                  key={i}
+                  onClick={() => onChoose(c)}
+                  className="text-left px-5 py-4 rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition font-sans"
+                >
+                  <span className="inline-block font-sans uppercase tracking-widest text-[10px] font-bold mr-2 align-middle text-slate-400">
+                    {c.letter}
+                  </span>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function FeedbackScreen({ scenario, choice, onContinue, willFail }) {
+  const tierDot = {
+    best: 'bg-green-600',
+    better: 'bg-blue-500',
+    ok: 'bg-amber-500',
+  }[choice.tier] || 'bg-slate-400';
+
+  const delta = (n, isFund) => {
+    if (n === 0) return null;
+    const positive = n > 0;
+    const color = positive ? 'text-green-700' : 'text-red-700';
+    const arrow = positive ? '▲' : '▼';
+    return (
+      <span className={`font-mono font-bold ${color} ml-2`}>
+        {arrow} {isFund ? '$' : ''}{Math.abs(n).toLocaleString()}{isFund ? '' : '%'}
+      </span>
+    );
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <Card>
+        <div className="flex items-center gap-3 mb-4">
+          <span className={`inline-block w-3 h-3 rounded-full ${tierDot}`}></span>
+          <span className="font-sans uppercase tracking-widest text-xs font-semibold text-slate-500">
+            You advised {scenario.name}
+          </span>
+        </div>
+        <p className="italic text-slate-600 mb-5">“{choice.label}”</p>
+        <p className="text-slate-900 leading-relaxed mb-6 text-lg">{choice.feedback}</p>
+
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-6 lg:gap-10 items-start border-t border-slate-200 pt-6">
+          <div>
+            <div className="uppercase tracking-widest text-xs font-sans font-semibold text-slate-500 mb-3">
+              What you can learn from this case
+            </div>
+            <p className="text-slate-700 leading-relaxed preserve-newlines">{scenario.vignette}</p>
+          </div>
+
+          <div className="flex flex-col gap-5 lg:sticky lg:top-32">
+            <div className="bg-slate-100 rounded-lg p-4 font-sans text-sm">
+              <div className="font-semibold text-slate-700 mb-2">Impact</div>
+              <div className="flex justify-between items-center pb-2 mb-2 border-b border-slate-200">
+                <span className="text-slate-600">Community Wellness</span>
+                {delta(choice.dWellness, false) || <span className="text-slate-400">—</span>}
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">Assistance Fund</span>
+                {delta(choice.dFund, true) || <span className="text-slate-400">—</span>}
+              </div>
+            </div>
+            <div className="text-center lg:text-left">
+              <PrimaryButton onClick={onContinue}>
+                {willFail ? 'See your final result' : scenario.nextContinue}
+              </PrimaryButton>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function WinScreen({ wellness, fund, onReset }) {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-10 lg:py-14">
+      <Card className="text-center">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-4" style={{color: 'var(--hca-green)'}}>
+          Thank you for working so hard to help our community understand health insurance!
+        </h1>
+        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-8 font-sans">
+          <div className="bg-slate-100 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-slate-500">Final wellness</div>
+            <div className="text-3xl font-bold" style={{color: 'var(--hca-green)'}}>{wellness}%</div>
+          </div>
+          <div className="bg-slate-100 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-slate-500">Fund remaining</div>
+            <div className="text-3xl font-bold" style={{color: 'var(--hca-blue)'}}>${fund.toLocaleString()}</div>
+          </div>
+        </div>
+        <PrimaryButton onClick={onReset}>Play Again</PrimaryButton>
+      </Card>
+    </div>
+  );
+}
+
+function LoseMoneyScreen({ wellness, fund, onReset }) {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-10 lg:py-14">
+      <Card className="text-center">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-4" style={{color: 'var(--hca-red)'}}>
+          You are out of money!
+        </h1>
+        <p className="text-lg text-slate-800 mb-8 max-w-xl mx-auto">
+          Sorry, but it looks like you don't have any funds left to continue providing assistance.
+        </p>
+        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-8 font-sans">
+          <div className="bg-slate-100 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-slate-500">Final wellness</div>
+            <div className="text-3xl font-bold" style={{color: 'var(--hca-green)'}}>{wellness}%</div>
+          </div>
+          <div className="bg-slate-100 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-slate-500">Fund remaining</div>
+            <div className="text-3xl font-bold" style={{color: 'var(--hca-red)'}}>${fund.toLocaleString()}</div>
+          </div>
+        </div>
+        <PrimaryButton onClick={onReset}>Play Again</PrimaryButton>
+      </Card>
+    </div>
+  );
+}
+
+function LoseWellnessScreen({ wellness, fund, onReset }) {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-10 lg:py-14">
+      <Card className="text-center">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-4" style={{color: 'var(--hca-red)'}}>
+          Community wellness dropped too low. :(
+        </h1>
+        <p className="text-lg text-slate-800 mb-8 max-w-xl mx-auto">
+          Sorry, but it looks like you’ll have to go back to training before we can give you any more community cases.
+        </p>
+        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto mb-8 font-sans">
+          <div className="bg-slate-100 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-slate-500">Final wellness</div>
+            <div className="text-3xl font-bold" style={{color: 'var(--hca-red)'}}>{wellness}%</div>
+          </div>
+          <div className="bg-slate-100 rounded-lg p-4">
+            <div className="text-xs uppercase tracking-widest text-slate-500">Fund remaining</div>
+            <div className="text-3xl font-bold" style={{color: 'var(--hca-blue)'}}>${fund.toLocaleString()}</div>
+          </div>
+        </div>
+        <PrimaryButton onClick={onReset}>Play Again</PrimaryButton>
+      </Card>
+    </div>
+  );
+}
+
+// ---- App --------------------------------------------------------------------
+
+function App() {
+  // Phases:
+  //   'title' | 'intro' (with introIdx 1-3 for overview/goal/training) | 'guide'
+  //   | 'inquiry' | 'terms' | 'advise' | 'feedback'
+  //   | 'win' | 'lose_money' | 'lose_wellness'
+  const [phase, setPhase] = useState('title');
+  const [introIdx, setIntroIdx] = useState(0);
+  const [scenarioIdx, setScenarioIdx] = useState(0);
+  const [choice, setChoice] = useState(null);
+  const [wellness, setWellness] = useState(START_WELLNESS);
+  const [fund, setFund] = useState(START_FUND);
+
+  // Scroll to top on every page change so long pages don't load mid-scroll.
+  useEffect(() => {
+    window.scrollTo({top: 0, left: 0, behavior: 'instant'});
+  }, [phase, scenarioIdx, introIdx]);
+
+  // Chapter mapping for the stepper:
+  //   'welcome' covers all intro slides + guide
+  //   each scenario is its own chapter (idx 1..4)
+  //   'end' for win/lose_*
+  function getChapterIdx() {
+    if (phase === 'title' || phase === 'intro' || phase === 'guide') return 0;
+    if (['inquiry', 'terms', 'advise', 'feedback'].includes(phase)) return 1 + scenarioIdx;
+    return CHAPTERS.length - 1; // results
+  }
+
+  function startGame() { setIntroIdx(1); setPhase('intro'); }
+  function advanceIntro() {
+    if (introIdx < INTRO_SLIDES.length - 1) {
+      setIntroIdx(introIdx + 1);
+    } else {
+      setPhase('guide');
+    }
+  }
+  function guideToFirstClient() { setPhase('inquiry'); }
+  function inquiryToTerms() { setPhase('terms'); }
+  function termsToAdvise() { setPhase('advise'); }
+
+  function makeChoice(c) {
+    const newWellness = Math.max(0, Math.min(100, wellness + c.dWellness));
+    const newFund = fund + c.dFund;
+    setWellness(newWellness);
+    setFund(newFund);
+    setChoice(c);
+    setPhase('feedback');
+  }
+
+  function nextStep() {
+    const moneyOut = fund <= 0;
+    const wellnessOut = wellness <= 0;
+    if (moneyOut) {
+      setPhase('lose_money');
+      return;
+    }
+    if (wellnessOut) {
+      setPhase('lose_wellness');
+      return;
+    }
+    if (scenarioIdx >= SCENARIOS.length - 1) {
+      setPhase('win');
+      return;
+    }
+    setScenarioIdx(scenarioIdx + 1);
+    setChoice(null);
+    setPhase('inquiry');
+  }
+
+  function reset() {
+    setPhase('title');
+    setIntroIdx(0);
+    setScenarioIdx(0);
+    setChoice(null);
+    setWellness(START_WELLNESS);
+    setFund(START_FUND);
+  }
+
+  const showHeader = phase !== 'title';
+  const chapterIdx = getChapterIdx();
+
+  // Predict whether the next click will end the game (for the Continue button label)
+  const willFail = useMemo(() => {
+    if (phase !== 'feedback') return false;
+    return (fund <= 0) || (wellness <= 0) || (scenarioIdx >= SCENARIOS.length - 1);
+  }, [phase, fund, wellness, scenarioIdx]);
+
+  return (
+    <div className="min-h-screen">
+      {showHeader && <Header wellness={wellness} fund={fund} chapterIdx={chapterIdx} />}
+      {phase === 'title' && <TitleScreen onStart={startGame} />}
+      {phase === 'intro' && (
+        <IntroSlideScreen slide={INTRO_SLIDES[introIdx]} onContinue={advanceIntro} />
+      )}
+      {phase === 'guide' && <Guide onContinue={guideToFirstClient} />}
+      {phase === 'inquiry' && (
+        <InquiryScreen scenario={SCENARIOS[scenarioIdx]} onContinue={inquiryToTerms} />
+      )}
+      {phase === 'terms' && (
+        <TermsReviewScreen
+          scenario={SCENARIOS[scenarioIdx]}
+          onContinue={termsToAdvise}
+          onBack={() => setPhase('inquiry')}
+        />
+      )}
+      {phase === 'advise' && (
+        <AdviseScreen
+          scenario={SCENARIOS[scenarioIdx]}
+          onChoose={makeChoice}
+          onBack={() => setPhase('terms')}
+        />
+      )}
+      {phase === 'feedback' && choice && (
+        <FeedbackScreen
+          scenario={SCENARIOS[scenarioIdx]}
+          choice={choice}
+          onContinue={nextStep}
+          willFail={willFail}
+        />
+      )}
+      {phase === 'win' && <WinScreen wellness={wellness} fund={fund} onReset={reset} />}
+      {phase === 'lose_money' && <LoseMoneyScreen wellness={wellness} fund={fund} onReset={reset} />}
+      {phase === 'lose_wellness' && <LoseWellnessScreen wellness={wellness} fund={fund} onReset={reset} />}
+
+      <footer className="text-center text-xs text-slate-500 py-6 font-sans">
+        Health Care America &middot; Prototype rebuild from the original Captivate project
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
 </html>
